@@ -80,7 +80,6 @@ const dialogs = new Dialogs<B>(
             message: match.message,
             address: match.address,
             data: match.data,
-            dialogStack: (match as any).dialogStack || []
         }),
         matchRemoteToLocal: (match, tasks) => ({
             activity: match.activity,
@@ -88,16 +87,13 @@ const dialogs = new Dialogs<B>(
             message: match.message,
             address: match.address,
             data: match.data,
-            dialogStack: match.dialogStack || [],
-            reply: (message: any) => {
-                console.log("remote reply");
+            reply: (message: any) =>
                 tasks.push({
                     method: 'reply',
                     args: {
                         message
                     }
-                });
-            }
+                })
         } as any),
         executeTasks: (match, tasks) => {},
     }
@@ -155,6 +151,7 @@ const gameDialog = dialogs.addLocal<GameArgs, GameResponse, GameState>(
         }
     },
     first(
+        re(/local/, m => console.log("no remote tasks")),
         re(/help/, m => m.reply("game help")),
         re(/cheat/, m => m.reply(`The answer is ${m.dialogData.num}`)),
         re(/\d+/, m => {
