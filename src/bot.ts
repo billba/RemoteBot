@@ -52,7 +52,8 @@ const dialogDataStorage: {
     [name: string]: any[];
 } = {};
 
-const dialogs = new Dialogs<B>({
+const dialogs = new Dialogs<B>(
+    {
         get: (match) => match.data.userInConversation.rootDialogInstance,
         set: (match, rootDialogInstance) => {
             match.data.userInConversation.rootDialogInstance = rootDialogInstance
@@ -81,15 +82,24 @@ const dialogs = new Dialogs<B>({
             data: match.data,
             dialogStack: (match as any).dialogStack || []
         }),
-        matchRemoteToLocal: (match) => ({
+        matchRemoteToLocal: (match, tasks) => ({
             activity: match.activity,
             text: match.text,
             message: match.message,
             address: match.address,
             data: match.data,
-            dialogStack: match.dialogStack || []
+            dialogStack: match.dialogStack || [],
+            reply: (message: any) => {
+                console.log("remote reply");
+                tasks.push({
+                    method: 'reply',
+                    args: {
+                        message
+                    }
+                });
+            }
         } as any),
-        executeTasks: (tasks) => {},
+        executeTasks: (match, tasks) => {},
     }
 );
 
@@ -136,37 +146,36 @@ interface GameResponse {
 }
 
 const gameDialog = dialogs.addLocal<GameArgs, GameResponse, GameState>(
-    match => {
+    m => {
         console.log("game activate");
-        // match.reply(`Guess a number between 0 and ${match.dialogArgs.upperLimit}. You have ${match.dialogArgs.maxGuesses} guesses.`);
+        m.reply(`Guess a number between 0 and ${m.dialogArgs.upperLimit}. You have ${m.dialogArgs.maxGuesses} guesses.`);
         return {
-            num: Math.floor(Math.random() * match.dialogArgs.upperLimit),
-            guesses: match.dialogArgs.maxGuesses
+            num: Math.floor(Math.random() * m.dialogArgs.upperLimit),
+            guesses: m.dialogArgs.maxGuesses
         }
     },
     first(
-        m => console.log("game rule"),
-        // re(/help/, m => m.reply("game help")),
-        // re(/cheat/, m => m.reply(`The answer is ${m.dialogData.num}`)),
-        // re(/\d+/, m => {
-        //     const guess = parseInt(m.groups[0]);
-        //     if (guess === m.dialogData.num) {
-        //         m.reply("You're right!");
-        //         return m.endThisDialog({ result: "win" });
-        //     }
+        re(/help/, m => m.reply("game help")),
+        re(/cheat/, m => m.reply(`The answer is ${m.dialogData.num}`)),
+        re(/\d+/, m => {
+            const guess = parseInt(m.groups[0]);
+            if (guess === m.dialogData.num) {
+                m.reply("You're right!");
+                // return m.endThisDialog({ result: "win" });
+            }
 
-        //     if (guess < m.dialogData.num )
-        //         m.reply("That is too low.");
-        //     else
-        //         m.reply("That is too high.");
+            if (guess < m.dialogData.num )
+                m.reply("That is too low.");
+            else
+                m.reply("That is too high.");
 
-        //     if (--m.dialogData.guesses === 0) {
-        //         m.reply("You are out of guesses");
-        //         return m.endThisDialog({ result: "lose" });
-        //     }
+            if (--m.dialogData.guesses === 0) {
+                m.reply("You are out of guesses");
+                // return m.endThisDialog({ result: "lose" });
+            }
             
-        //     m.reply(`You have ${m.dialogData.guesses} left.`);
-        // }),
+            m.reply(`You have ${m.dialogData.guesses} left.`);
+        }),
     ),
     'game'
 );
@@ -199,6 +208,7 @@ app.post('/dialogs', (req, res) => {
         case 'tryMatch':
             console.log("tryMatch")
             dialogs.remoteTryMatch(body.name, body.instance, body.match)
+            .do(response => console.log("remote sending ", response))
             .subscribe(response => res.send(response));
             return;
         
