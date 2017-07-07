@@ -28,7 +28,7 @@ type B = IStateMatch<BotData> & IChatMessageMatch;
 
 // General purpose rule stuff
 
-import { IRule, first, best, prependMatcher, rule, run } from 'prague-botframework-browserbot';
+import { IRouter, first, best, prependMatcher, router, run } from 'prague-botframework-browserbot';
 
 // Regular Expressions
 
@@ -176,14 +176,14 @@ app.post('/dialogs', (req, res) => {
     switch (body.method) {
         case 'activate':
             console.log("activating", body);
-            dialogs.remoteActivate(body.name, body.match, body.args)
+            dialogs.remoteActivate(body.name, body.message, body.args)
                 .do(response => console.log("response from activating", response))
                 .subscribe(response => res.send(response));
             return;
 
         case 'tryMatch':
             console.log("tryMatch")
-            dialogs.remoteTryMatch(body.name, body.instance, body.match)
+            dialogs.remoteTryMatch(body.name, body.instance, body.message)
                 .do(response => console.log("response from tryMatch", response))
                 .subscribe(response => res.send(response));
             return;
